@@ -1,5 +1,6 @@
 # coding: utf-8
 class Photo < ActiveRecord::Base
+  include BaseModel
 
   belongs_to :user
 

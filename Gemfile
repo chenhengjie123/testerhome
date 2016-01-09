@@ -39,6 +39,7 @@ gem 'letter_avatar'
 
 # 数据库
 gem 'pg'
+gem 'activerecord_any_of'
 
 # 用户系统
 gem 'devise', '~> 3.5.1'

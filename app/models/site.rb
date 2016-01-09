@@ -1,5 +1,6 @@
 # coding: utf-8
 class Site < ActiveRecord::Base
+  include BaseModel
 
   belongs_to :site_node
   belongs_to :user
@@ -22,7 +23,7 @@ class Site < ActiveRecord::Base
   end
 
   def check_uniq
-    if Site.unscoped.where(:url => url).not(id: id).count > 0
+    if Site.unscoped.where(:url => url).count > 0
       self.errors.add(:url,"已经提交过了。")
     end
   end

@@ -1,6 +1,8 @@
 # coding: utf-8
 require "digest/md5"
 class Reply < ActiveRecord::Base
+  include SoftDelete
+  include MarkdownBody
 
   UPVOTES = %w(+1 :+1: :thumbsup: :plus1: 👍 👍🏻 👍🏼 👍🏽 👍🏾 👍🏿)
 
@@ -8,13 +10,11 @@ class Reply < ActiveRecord::Base
   belongs_to :topic, inverse_of: :replies, touch: true, counter_cache: true
   has_many :notifications, class_name: 'Notification::Base', dependent: :destroy
 
-  counter_cache name: :user, inverse_of: :replies
-  counter_cache name: :topic, inverse_of: :replies
-
   delegate :title, to: :topic, prefix: true, allow_nil: true
   delegate :login, to: :user, prefix: true, allow_nil: true
 
   scope :fields_for_list, -> { select(:topic_id, :id, :body_html, :updated_at, :created_at) }
+  scope :without_body, -> { select(column_names - ['body'])}
 
   validates_presence_of :body
   validates_uniqueness_of :body, scope: [:topic_id, :user_id], message: "不能重复提交。"

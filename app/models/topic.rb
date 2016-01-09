@@ -11,6 +11,8 @@ CORRECT_CHARS = [
 class Topic < ActiveRecord::Base
   include Redis::Objects
   include BaseModel
+  include Likeable
+  include MarkdownBody
 
   # 临时存储检测用户是否读过的结果
   attr_accessor :read_state, :admin_editing, :admin_deleting
@@ -51,13 +53,11 @@ class Topic < ActiveRecord::Base
 
   scope :without_hide_nodes, -> { exclude_column_ids("node_id", Topic.topic_index_hide_node_ids) }
   scope :without_nodes, proc { |node_ids|
-                        ids = node_ids + Topic.topic_index_hide_node_ids
-                        ids.uniq!
-                        exclude_column_ids("node_id", ids)
-                      }
-  scope :without_users, proc { |user_ids|
-    exclude_column_ids("user_id", user_ids)
+    ids = node_ids + topic_index_hide_node_ids
+    ids.uniq!
+    where("node_id NOT IN (?)", ids)
   }
+  scope :without_users, proc { |user_ids| where("user_id NOT IN (?)", user_ids) }
   scope :without_body, -> { select(column_names - ['body'])}
 
   def self.fields_for_list
@@ -65,41 +65,30 @@ class Topic < ActiveRecord::Base
     select(column_names - columns.map(&:to_s))
   end
 
-
-  def self.find_by_message_id(message_id)
-    where(message_id: message_id).first
+  def full_body
+    ([self.body] + self.replies.pluck(:body)).join('\n\n')
   end
 
   def self.topic_index_hide_node_ids
-    SiteConfig.node_ids_hide_in_topics_index.to_s.split(",").collect { |id| id.to_i }
+    SiteConfig.node_ids_hide_in_topics_index.to_s.split(',').collect(&:to_i)
   end
 
   before_save :store_cache_fields
   def store_cache_fields
-    self.node_name = self.node.try(:name) || ""
-  end
-  before_save :auto_space_with_title
-  def auto_space_with_title
-    self.title.auto_space!
+    self.node_name = node.try(:name) || ''
   end
 
   before_save :auto_correct_title
   def auto_correct_title
     CORRECT_CHARS.each do |chars|
-      self.title.gsub!(chars[0], chars[1])
+      title.gsub!(chars[0], chars[1])
     end
-    self.title.auto_space!
+    title.auto_space!
   end
 
   before_save do
-    if self.admin_editing == true && self.node_id_changed?
-      self.class.notify_topic_node_changed(self.id, self.node_id)
-    end
-  end
-
-  before_destroy do
-    if self.admin_deleting == true
-      self.class.notify_topic_deleted(self.id)
+    if admin_editing == true && self.node_id_changed?
+      self.class.notify_topic_node_changed(id, node_id)
     end
   end
 
@@ -133,28 +122,30 @@ class Topic < ActiveRecord::Base
     # replied_at 用于最新回复的排序，如果帖着创建时间在一个月以前，就不再往前面顶了
     return false if reply.blank? && !opts[:force]
 
-    self.last_active_mark = Time.now.to_i if self.created_at > 3.months.ago
+    self.last_active_mark = Time.now.to_i if created_at > 3.months.ago
     self.replied_at = reply.try(:created_at)
     self.last_reply_id = reply.try(:id)
     self.last_reply_user_id = reply.try(:user_id)
     self.last_reply_user_login = reply.try(:user_login)
-    self.save
+    # Reindex Search document
+    SearchIndexer.perform_later('update', 'topic', self.id)
+    save
   end
 
   # 更新最后更新人，当最后个回帖删除的时候
   def update_deleted_last_reply(deleted_reply)
     return false if deleted_reply.blank?
-    return false if self.last_reply_user_id != deleted_reply.user_id
+    return false if last_reply_user_id != deleted_reply.user_id
 
-    previous_reply = self.replies.where("id NOT IN (?)", [deleted_reply.id]).recent.first
-    self.update_last_reply(previous_reply, force: true)
+    previous_reply = replies.where("id NOT IN (?)", [deleted_reply.id]).recent.first
+    update_last_reply(previous_reply, force: true)
   end
 
   # 删除并记录删除人
   def destroy_by(user)
     return false if user.blank?
-    self.update_attribute(:who_deleted,user.login)
-    self.destroy
+    update_attribute(:who_deleted, user.login)
+    destroy
   end
 
   def destroy
@@ -169,7 +160,7 @@ class Topic < ActiveRecord::Base
 
   # 所有的回复编号
   def reply_ids
-    Rails.cache.fetch([self,"reply_ids"]) do
+    Rails.cache.fetch([self, 'reply_ids']) do
       replies.only(:id).map(&:id).sort
     end
   end
@@ -178,9 +169,18 @@ class Topic < ActiveRecord::Base
     reply_index = self.replies.unscoped.without_body.count
     [reply_index / Reply.per_page + 1, reply_index]
   end
-
+  
   def excellent?
-    self.excellent >= 1
+    excellent >= 1
+  end
+
+  def ban!
+    update_attributes(lock_node: true, node_id: Node.no_point_id, admin_editing: true)
+  end
+
+  def floor_of_reply(reply)
+    reply_index = reply_ids.index(reply.id)
+    reply_index + 1
   end
 
   def self.notify_topic_created(topic_id)
@@ -198,7 +198,7 @@ class Topic < ActiveRecord::Base
       next if notified_user_ids.include?(uid)
       # 排除回帖人
       next if uid == topic.user_id
-      puts "Post Notification to: #{uid}"
+      logger.debug "Post Notification to: #{uid}"
       Notification::Topic.create user_id: uid, topic_id: topic.id
     end
     true

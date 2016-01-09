@@ -1,8 +1,7 @@
-# coding: UTF-8
-class Cpanel::ApplicationsController < Cpanel::ApplicationController
-
-  def index
-    @applications = Doorkeeper::Application.desc('_id').paginate(page: params[:page], per_page: 20)
+module Cpanel
+  class ApplicationsController < ApplicationController
+    def index
+      @applications = Doorkeeper::Application.order(id: :desc).paginate(page: params[:page], per_page: 20)
 
     respond_to do |format|
       format.html # index.html.erb

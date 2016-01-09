@@ -8,7 +8,7 @@ class TopicsController < ApplicationController
     @suggest_topics = Topic.without_hide_nodes.suggest.fields_for_list.limit(3).to_a
     @suggest_topic_ids = @suggest_topics.collect(&:id)
 
-    @topics = Topic.last_actived.without_hide_nodes.where(:_id.nin => @suggest_topic_ids)
+    @topics = Topic.last_actived.without_suggest
 
     if current_user
       @topics = @topics.without_nodes(current_user.blocked_node_ids)

@@ -26,6 +26,8 @@ class User < ActiveRecord::Base
   mount_uploader :avatar, AvatarUploader
   mount_uploader :qrcode, QrcodeUploader
 
+  mount_uploader :avatar, AvatarUploader
+
   has_many :topics, dependent: :destroy
   has_many :notes
   has_many :replies, dependent: :destroy
@@ -256,12 +258,12 @@ class User < ActiveRecord::Base
     return if self.topic_read?(topic)
 
     self.notifications.unread.any_of({mentionable_type: 'Topic', mentionable_id: topic.id},
-                                     {mentionable_type: 'Reply', :mentionable_id.in => topic.reply_ids},
-                                     {:reply_id.in => topic.reply_ids}).update_all(read: true)
+                                { mentionable_type: 'Reply', mentionable_id: topic.reply_ids },
+                                reply_id: topic.reply_ids).update_all(read: true)
 
     # 处理 last_reply_id 是空的情况
     last_reply_id = topic.last_reply_id || -1
-    Rails.cache.write("user:#{self.id}:topic_read:#{topic.id}", last_reply_id)
+    Rails.cache.write("user:#{id}:topic_read:#{topic.id}", last_reply_id)
   end
 
   # 赞东西
@@ -269,8 +271,7 @@ class User < ActiveRecord::Base
     return false if likeable.blank?
     return false if likeable.user_id == self.id
     return false if liked?(likeable)
-
-    likeable.push(liked_user_ids: self.id)
+    likeable.push(liked_user_ids: id)
     likeable.inc(likes_count: 1)
     likeable.touch
   end
@@ -278,9 +279,9 @@ class User < ActiveRecord::Base
   # 取消赞
   def unlike(likeable)
     return false if likeable.blank?
-    return false if likeable.user_id == self.id
     return false unless liked?(likeable)
-    likeable.pull(liked_user_ids: self.id)
+    return false if likeable.user_id == self.id
+    likeable.pull(liked_user_ids: id)
     likeable.inc(likes_count: -1)
     likeable.touch
   end
@@ -295,7 +296,7 @@ class User < ActiveRecord::Base
     return false if topic_id.blank?
     topic_id = topic_id.to_i
     return false if favorited_topic?(topic_id)
-    self.push(favorite_topic_ids: topic_id)
+    push(favorite_topic_ids: topic_id)
     true
   end
 
@@ -303,7 +304,7 @@ class User < ActiveRecord::Base
   def unfavorite_topic(topic_id)
     return false if topic_id.blank?
     topic_id = topic_id.to_i
-    self.pull(favorite_topic_ids: topic_id)
+    pull(favorite_topic_ids: topic_id)
     true
   end
 
@@ -313,7 +314,7 @@ class User < ActiveRecord::Base
   end
 
   def favorite_topics_count
-    self.favorite_topic_ids.size
+    favorite_topic_ids.size
   end
 
   def update_score fen
@@ -325,21 +326,21 @@ class User < ActiveRecord::Base
   # 只是把用户信息修改了
   def soft_delete
     # assuming you have deleted_at column added already
-    self.bio = ""
-    self.website = ""
-    self.github = ""
-    self.tagline = ""
-    self.location = ""
+    self.bio = ''
+    self.website = ''
+    self.github = ''
+    self.tagline = ''
+    self.location = ''
     self.authorizations = []
     self.state = STATE[:deleted]
-    self.save(validate: false)
+    save(validate: false)
   end
 
   # GitHub 项目
   def github_repositories
-    cache_key = self.github_repositories_cache_key
+    cache_key = github_repositories_cache_key
     items = Rails.cache.read(cache_key)
-    if items == nil
+    if items.nil?
       GithubRepoFetcherJob.perform_later(id)
       items = []
     end
@@ -347,7 +348,7 @@ class User < ActiveRecord::Base
   end
 
   def github_repositories_cache_key
-    "github_repositories:#{self.github}+10+v3"
+    "github_repositories:#{github}+10+v4"
   end
 
   def self.fetch_github_repositories(user_id)
@@ -358,7 +359,7 @@ class User < ActiveRecord::Base
 
     url = "https://api.github.com/users/#{github_login}/repos?type=owner&sort=pushed&client_id=#{Setting.github_token}&client_secret=#{Setting.github_secret}"
     begin
-      json = Timeout::timeout(5) do
+      json = Timeout.timeout(10) do
         open(url).read
       end
     rescue => e
@@ -371,76 +372,76 @@ class User < ActiveRecord::Base
     items = JSON.parse(json)
     items = items.collect do |a1|
       {
-        name: a1["name"],
-        url: a1["html_url"],
-        watchers: a1["watchers"],
-        language: a1["language"],
-        description: a1["description"]
+        name: a1['name'],
+        url: a1['html_url'],
+        watchers: a1['watchers'],
+        language: a1['language'],
+        description: a1['description']
       }
     end
-    items = items.sort { |a1,a2| a2[:watchers] <=> a1[:watchers] }.take(10)
+    items = items.sort { |a1, a2| a2[:watchers] <=> a1[:watchers] }.take(10)
     Rails.cache.write(user.github_repositories_cache_key, items, expires_in: 15.days)
     items
   end
 
   # 重新生成 Private Token
   def update_private_token
-    random_key = "#{SecureRandom.hex(10)}:#{self.id}"
-    self.update_attribute(:private_token, random_key)
+    random_key = "#{SecureRandom.hex(10)}:#{id}"
+    update_attribute(:private_token, random_key)
   end
 
   def ensure_private_token!
-    self.update_private_token if self.private_token.blank?
+    update_private_token if private_token.blank?
   end
 
   def block_node(node_id)
     new_node_id = node_id.to_i
-    return false if self.blocked_node_ids.include?(new_node_id)
-    self.push(blocked_node_ids: new_node_id)
+    return false if blocked_node_ids.include?(new_node_id)
+    push(blocked_node_ids: new_node_id)
   end
 
   def unblock_node(node_id)
     new_node_id = node_id.to_i
-    self.pull(blocked_node_ids: new_node_id)
+    pull(blocked_node_ids: new_node_id)
   end
 
   def blocked_users?
-    return self.blocked_user_ids.count > 0
+    blocked_user_ids.count > 0
   end
 
   def blocked_user?(user)
     uid = user.is_a?(User) ? user.id : user
-    return self.blocked_user_ids.include?(uid)
+    blocked_user_ids.include?(uid)
   end
 
   def block_user(user_id)
     user_id = user_id.to_i
     return false if self.blocked_user?(user_id)
-    self.push(blocked_user_ids: user_id)
+    push(blocked_user_ids: user_id)
   end
 
   def unblock_user(user_id)
     user_id = user_id.to_i
-    self.pull(blocked_user_ids: user_id)
+    pull(blocked_user_ids: user_id)
   end
 
   def followed?(user)
     uid = user.is_a?(User) ? user.id : user
-    return self.following_ids.include?(uid)
+    following_ids.include?(uid)
   end
 
   def follow_user(user)
     return false if user.blank?
-    self.following.push(user)
+    following.push(user)
     Notification::Follow.notify(user: user, follower: self)
   end
 
   def followers_count
-    self.follower_ids.count
+    follower_ids.count
   end
 
   def following_count
-    self.following_ids.count
+    following_ids.count
   end
 
   def unfollow_user(user)
@@ -483,7 +484,12 @@ class User < ActiveRecord::Base
   end
 
   def letter_avatar_url(size)
-    path = LetterAvatar.generate(self.login, size).sub('public/', '/')
-    "//#{Setting.domain}#{path}"
+    path = LetterAvatar.generate(self.login, size).sub('public/','/')
+
+    "#{Setting.protocol}://#{Setting.domain}#{path}"
+  end
+
+  def avatar?
+    self[:avatar].present?
   end
 end
