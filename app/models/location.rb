@@ -5,19 +5,17 @@ class Location < ActiveRecord::Base
 
   scope :hot, -> { order(users_count: :desc) }
 
-  validates_uniqueness_of :name, case_sensitive: false
-
+  validates :name, uniqueness: { case_sensitive: false }
 
   def self.find_by_name(name)
     return nil if name.blank?
     name = name.downcase.strip
-    query = name.match(/\p{Han}/) != nil ? name : /#{name}/i
-    self.where(name: query).first
+    where(name: "'#{name}'").first
   end
 
   def self.find_or_create_by_name(name)
-    if not location = self.find_by_name(name)
-      location = self.create(name: name.strip)
+    unless (location = find_by_name(name))
+      location = create(name: name.strip)
     end
     location
   end

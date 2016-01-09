@@ -10,7 +10,7 @@ class User < ActiveRecord::Base
   ALLOW_LOGIN_CHARS_REGEXP = /\A\w+\z/
 
   devise :database_authenticatable, :registerable, :recoverable,
-         :rememberable, :trackable, :validatable, :omniauthable
+         :rememberable, :trackable, :validatable, :omniauthable, :async
 
   # skill
   attr_accessor :skill_list
@@ -45,32 +45,31 @@ class User < ActiveRecord::Base
   end
 
   attr_accessor :password_confirmation
-  ACCESSABLE_ATTRS = [:name, :email_public, :location, :company, :bio, :website, :github, :twitter, :tagline, :avatar, :qrcode, :by, :current_password, :password, :password_confirmation, :skill_list, :_rucaptcha]
+  ACCESSABLE_ATTRS = [:name, :email_public, :location, :company, :bio, :website, :github, :twitter,
+                      :tagline, :avatar, :qrcode, :by, :current_password, :password, :password_confirmation, :skill_list, 
+                      :_rucaptcha]
 
   STATE = {
-      # 软删除
-      deleted: -1,
-      # 正常
-      normal: 1,
-      # 屏蔽
-      blocked: 2,
+    # 软删除
+    deleted: -1,
+    # 正常
+    normal: 1,
+    # 屏蔽
+    blocked: 2
   }
 
-  validates :login, format: { with: ALLOW_LOGIN_CHARS_REGEXP, message: '只允许数字、大小写字母和下划线'},
-                              length: {:in => 3..20}, presence: true,
-                              uniqueness: {case_sensitive: false}
+  validates :login, format: { with: ALLOW_LOGIN_CHARS_REGEXP, message: '只允许数字、大小写字母和下划线' },
+                    length: { in: 3..20 }, presence: true,
+                    uniqueness: { case_sensitive: false}
 
-  # has_and_belongs_to_many :following, class_name: 'User', inverse_of: :followers
-  # has_and_belongs_to_many :followers, class_name: 'User', inverse_of: :following
+#  has_and_belongs_to_many :following, class_name: 'User', inverse_of: :followers
+#  has_and_belongs_to_many :followers, class_name: 'User', inverse_of: :following
 
   scope :hot, -> { order(replies_count: :desc).order(topics_count: :desc) }
   scope :fields_for_list, lambda {
-                          select(:id, :name, :login, :email, :email_md5, :email_public, :avatar, :verified, :state,
-                               :tagline, :github, :website, :location, :location_id, :twitter, :co)
-                        }
-
-  scope :outstanding, -> {desc(:score)}
-  scope :age, -> {asc(:_id)}
+    select(:id, :name, :login, :email, :email_md5, :email_public, :avatar, :verified, :state,
+         :tagline, :github, :website, :location, :location_id, :twitter, :co)
+  }
 
   def following
     User.where(id: self.following_ids)
@@ -85,19 +84,19 @@ class User < ActiveRecord::Base
   end
 
   def email=(val)
-    self.email_md5 = Digest::MD5.hexdigest(val || "")
+    self.email_md5 = Digest::MD5.hexdigest(val || '')
     self[:email] = val
   end
 
   def temp_access_token
-    Rails.cache.fetch("user-#{self.id}-temp_access_token-#{Time.now.strftime("%Y%m%d")}") do
+    Rails.cache.fetch("user-#{id}-temp_access_token-#{Time.now.strftime('%Y%m%d')}") do
       SecureRandom.hex
     end
   end
 
   def self.find_for_database_authentication(conditions)
     login = conditions.delete(:login)
-    self.where(login: /^#{login}$/i).first || self.where(email: /^#{login}$/i).first
+    where(login: /^#{login}$/i).first || where(email: /^#{login}$/i).first
   end
 
   def password_required?
@@ -105,44 +104,44 @@ class User < ActiveRecord::Base
   end
 
   def github_url
-    return "" if self.github.blank?
-    "https://github.com/#{self.github.split('/').last}"
+    return '' if github.blank?
+    "https://github.com/#{github.split('/').last}"
   end
 
   def twitter_url
-    return "" if self.twitter.blank?
-    "https://twitter.com/#{self.twitter}"
+    return '' if twitter.blank?
+    "https://twitter.com/#{twitter}"
   end
 
   def google_profile_url
-    return "" if self.email.blank? or !self.email.match(/gmail\.com/)
-    return "http://www.google.com/profiles/#{self.email.split("@").first}"
+    return '' if email.blank? || !email.match(/gmail\.com/)
+    "http://www.google.com/profiles/#{email.split('@').first}"
   end
 
   def fullname
-    return self.login if self.name.blank?
-    return "#{self.login} (#{self.name})"
+    return login if name.blank?
+    "#{login} (#{name})"
   end
 
   # 是否是管理员
   def admin?
-    Setting.admin_emails.include?(self.email)
+    Setting.admin_emails.include?(email)
   end
 
   # 是否有 Wiki 维护权限
   def wiki_editor?
-    self.admin? or self.verified == true or self.topics_count >= 20
+    self.admin? || verified == true || topics_count >= 20
   end
 
   # 回帖大于 150 的才有酷站的发布权限
   def site_editor?
-    self.admin? or self.replies_count >= 100
+    self.admin? || replies_count >= 100
   end
 
   # 是否能发帖
   def newbie?
     return false if verified? or hr?
-    self.created_at > 1.day.ago
+    created_at > 1.day.ago
   end
 
   def hr?
@@ -154,20 +153,20 @@ class User < ActiveRecord::Base
   end
 
   def blocked?
-    return self.state == STATE[:blocked]
+    state == STATE[:blocked]
   end
 
   def deleted?
-    return self.state == STATE[:deleted]
+    state == STATE[:deleted]
   end
 
   def has_role?(role)
     case role
-      when :admin then admin?
-      when :wiki_editor then wiki_editor?
-      when :site_editor then site_editor?
-      when :member then self.state == STATE[:normal]
-      else false
+    when :admin then admin?
+    when :wiki_editor then wiki_editor?
+    when :site_editor then site_editor?
+    when :member then state == STATE[:normal]
+    else false
     end
   end
 
@@ -186,11 +185,14 @@ class User < ActiveRecord::Base
   before_save :store_location
   def store_location
     if self.location_changed?
-      if not self.location.blank?
+      if !location.blank?
         old_location = Location.find_by_name(self.location_was)
         old_location.inc(users_count: -1) if not old_location.blank?
+        old_location = Location.find_by(name: self.location_was)
+        old_location.decrement!(:users_count) unless old_location.blank?
         location = Location.find_or_create_by_name(self.location)
         location.inc(users_count: 1)
+        location.increment!(:users_count)
         self.location_id = (location.blank? ? nil : location.id)
       else
         self.location_id = nil
@@ -198,14 +200,12 @@ class User < ActiveRecord::Base
     end
   end
 
-
-
-  def update_with_password(params={})
-    if !params[:current_password].blank? or !params[:password].blank? or !params[:password_confirmation].blank?
+  def update_with_password(params = {})
+    if !params[:current_password].blank? || !params[:password].blank? || !params[:password_confirmation].blank?
       super
     else
       params.delete(:current_password)
-      self.update_without_password(params)
+      update_without_password(params)
     end
   end
 
@@ -214,35 +214,36 @@ class User < ActiveRecord::Base
   end
 
   def self.find_login(slug)
-    where(login: slug).first
+    fail ActiveRecord::RecordNotFound.new(slug: slug) unless slug =~ ALLOW_LOGIN_CHARS_REGEXP
+    where(login: slug.downcase).first || fail(ActiveRecord::RecordNotFound.new(slug: slug))
   end
 
   def bind?(provider)
-    self.authorizations.collect { |a| a.provider }.include?(provider)
+    authorizations.collect(&:provider).include?(provider)
   end
 
   def bind_service(response)
-    provider = response["provider"]
-    uid = response["uid"].to_s
-    authorizations.create(provider: provider, uid: uid )
+    provider = response['provider']
+    uid = response['uid'].to_s
+    authorizations.create(provider: provider, uid: uid)
   end
 
   # 是否读过 topic 的最近更新
   def topic_read?(topic)
     # 用 last_reply_id 作为 cache key ，以便不热门的数据自动被 Memcached 挤掉
     last_reply_id = topic.last_reply_id || -1
-    Rails.cache.read("user:#{self.id}:topic_read:#{topic.id}") == last_reply_id
+    Rails.cache.read("user:#{id}:topic_read:#{topic.id}") == last_reply_id
   end
 
   def filter_readed_topics(topics)
     t1 = Time.now
     key_hashs = {}
     return [] if topics.blank?
-    cache_keys = topics.map { |t| "user:#{self.id}:topic_read:#{t.id}" }
+    cache_keys = topics.map { |t| "user:#{id}:topic_read:#{t.id}" }
     results = Rails.cache.read_multi(*cache_keys)
     ids = []
     topics.each do |topic|
-      val = results["user:#{self.id}:topic_read:#{topic.id}"]
+      val = results["user:#{id}:topic_read:#{topic.id}"]
       if (val == (topic.last_reply_id || -1))
         ids << topic.id
       end
@@ -257,7 +258,7 @@ class User < ActiveRecord::Base
     return if topic.blank?
     return if self.topic_read?(topic)
 
-    self.notifications.unread.any_of({mentionable_type: 'Topic', mentionable_id: topic.id},
+    notifications.unread.where.any_of({ mentionable_type: 'Topic', mentionable_id: topic.id },
                                 { mentionable_type: 'Reply', mentionable_id: topic.reply_ids },
                                 reply_id: topic.reply_ids).update_all(read: true)
 
@@ -272,7 +273,7 @@ class User < ActiveRecord::Base
     return false if likeable.user_id == self.id
     return false if liked?(likeable)
     likeable.push(liked_user_ids: id)
-    likeable.inc(likes_count: 1)
+    likeable.increment!(likes_count: 1)
     likeable.touch
   end
 
@@ -282,7 +283,7 @@ class User < ActiveRecord::Base
     return false unless liked?(likeable)
     return false if likeable.user_id == self.id
     likeable.pull(liked_user_ids: id)
-    likeable.inc(likes_count: -1)
+    likeable.increment!(likes_count: -1)
     likeable.touch
   end
 
@@ -432,7 +433,7 @@ class User < ActiveRecord::Base
 
   def follow_user(user)
     return false if user.blank?
-    following.push(user)
+    self.push(following_ids: user.id)
     Notification::Follow.notify(user: user, follower: self)
   end
 
@@ -446,7 +447,7 @@ class User < ActiveRecord::Base
 
   def unfollow_user(user)
     return false if user.blank?
-    self.following.delete(user)
+    self.pull(following_ids: user.id)
   end
 
 

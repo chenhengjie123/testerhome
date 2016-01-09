@@ -125,6 +125,7 @@ group :development, :test do
   gem 'capybara', '~> 2.3.0'
   gem 'api_taster', '0.6.0'
   gem 'letter_opener'
+  gem 'byebug'
   # Better Errors
   gem 'better_errors'
   gem 'binding_of_caller'

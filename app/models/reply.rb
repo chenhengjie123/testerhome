@@ -3,6 +3,8 @@ require "digest/md5"
 class Reply < ActiveRecord::Base
   include SoftDelete
   include MarkdownBody
+  include Likeable
+  include Mentionable
 
   UPVOTES = %w(+1 :+1: :thumbsup: :plus1: 👍 👍🏻 👍🏼 👍🏽 👍🏾 👍🏿)
 

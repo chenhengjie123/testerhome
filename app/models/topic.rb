@@ -13,6 +13,7 @@ class Topic < ActiveRecord::Base
   include BaseModel
   include Likeable
   include MarkdownBody
+  include Mentionable
 
   # 临时存储检测用户是否读过的结果
   attr_accessor :read_state, :admin_editing, :admin_deleting
