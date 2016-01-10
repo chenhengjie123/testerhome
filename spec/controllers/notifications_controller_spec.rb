@@ -1,35 +1,47 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe NotificationsController do
-  let(:user) { Factory :user }
-  describe "#index" do
-    it "should show notifications" do
+describe NotificationsController, type: :controller do
+  let(:user) { create :user }
+  describe '#index' do
+    it 'should show notifications' do
       sign_in user
-      Factory :notification_mention, :user => user, :mentionable => Factory(:reply)
-      Factory :notification_topic_reply, :user => user
+      create :notification_mention, user: user, mentionable: create(:reply)
+      create :notification_topic_reply, user: user
       get :index
-      response.should render_template(:index)
+      expect(response).to render_template(:index)
+      expect(user.notifications.unread.count).to eq(0)
     end
   end
 
-  describe "#destroy" do
-    it "should destroy notification" do
+  describe '#destroy' do
+    it 'should destroy notification' do
       sign_in user
-      notification = Factory :notification_mention, :user => user, :mentionable => Factory(:reply)
+      notification = create :notification_mention, user: user, mentionable: create(:reply)
 
-      lambda do
-        delete :destroy, :id => notification
-      end.should change(user.notifications, :count)
+      expect do
+        delete :destroy, id: notification
+      end.to change(user.notifications, :count)
     end
   end
 
-  describe "#clear" do
-    it "should clear all" do
+  describe '#clear' do
+    it 'should clear all' do
       sign_in user
-      3.times{ Factory :notification_mention, :user => user, :mentionable => Factory(:reply) }
+      3.times { create :notification_mention, user: user, mentionable: create(:reply) }
 
       post :clear
-      user.notifications.unread.count.should == 0
+      expect(user.notifications.unread.size).to eq(0)
+    end
+  end
+
+  describe 'unread' do
+    it 'should show unread only' do
+      sign_in user
+      3.times { create :notification_mention, user: user, mentionable: create(:reply) }
+      1.times { create :notification_mention, user: user, mentionable: create(:reply), read: true }
+      get :unread
+      expect(assigns(:notifications).size).to eq(3)
+      expect(user.notifications.unread.count).to eq(0)
     end
   end
 end

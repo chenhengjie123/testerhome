@@ -9,7 +9,15 @@ tmp/**/*
 .sass-cache/
 punlic/
 public/assets/
+config/database.yml
+config/mongoid.yml
+config/config.yml
+config/thin.yml
+config/redis.yml
+config/mailer_daemon.yml
+config/secrets.yml
 public/uploads/**/*
+public/system/**/*
 public/topics
 public/topics/**/*
 .redcar
@@ -21,9 +29,12 @@ vendor/ruby
 doc/wiki_repo
 solr/data/
 solr/pids/
-bin/
 tags
 chromedriver.log
+
+spec/examples.txt
+.vagrant
+.byebug_history
 
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm
@@ -32,8 +43,6 @@ chromedriver.log
 
 ## Directory-based project format:
 .idea/
-# if you remove the above rule, at least ignore the following:
-
 # User-specific stuff:
 # .idea/workspace.xml
 # .idea/tasks.xml

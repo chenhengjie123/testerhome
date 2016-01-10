@@ -37,14 +37,15 @@ class User < ActiveRecord::Base
   has_many :oauth_applications, class_name: 'Doorkeeper::Application', as: :owner
 
   def read_notifications(notifications)
-    unread_ids = notifications.find_all{|notification| !notification.read?}.map(&:id)
+    unread_ids = notifications.find_all { |notification| !notification.read? }.map(&:id)
     if unread_ids.any?
       Notification::Base.where(user_id: id,read: false)
-          .where("id IN (?)", unread_ids).update_all(read: true, updated_at: Time.now)
+        .where("id IN (?)", unread_ids).update_all(read: true, updated_at: Time.now)
     end
   end
 
   attr_accessor :password_confirmation
+
   ACCESSABLE_ATTRS = [:name, :email_public, :location, :company, :bio, :website, :github, :twitter,
                       :tagline, :avatar, :qrcode, :by, :current_password, :password, :password_confirmation, :skill_list, 
                       :_rucaptcha]
@@ -186,12 +187,9 @@ class User < ActiveRecord::Base
   def store_location
     if self.location_changed?
       if !location.blank?
-        old_location = Location.find_by_name(self.location_was)
-        old_location.inc(users_count: -1) if not old_location.blank?
-        old_location = Location.find_by(name: self.location_was)
+        old_location = Location.location_find_by_name(self.location_was)
         old_location.decrement!(:users_count) unless old_location.blank?
-        location = Location.find_or_create_by_name(self.location)
-        location.inc(users_count: 1)
+        location = Location.location_find_or_create_by_name(self.location)
         location.increment!(:users_count)
         self.location_id = (location.blank? ? nil : location.id)
       else
@@ -215,7 +213,7 @@ class User < ActiveRecord::Base
 
   def self.find_login(slug)
     fail ActiveRecord::RecordNotFound.new(slug: slug) unless slug =~ ALLOW_LOGIN_CHARS_REGEXP
-    where(login: slug.downcase).first || fail(ActiveRecord::RecordNotFound.new(slug: slug))
+    where("login ~* ?", slug).first || fail(ActiveRecord::RecordNotFound.new(slug: slug))
   end
 
   def bind?(provider)
