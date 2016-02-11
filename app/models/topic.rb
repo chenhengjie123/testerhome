@@ -39,16 +39,26 @@ class Topic < ActiveRecord::Base
   scope :high_replies, -> { order(replies_count: :desc).order(id: :desc) }
   scope :no_reply, -> { where(replies_count: 0) }
   scope :popular, -> { where("likes_count > 5") }
+  scope :exclude_column_ids, proc {|column, ids|
+                             if ids.size == 0
+                               all
+                             else
+                               where("#{column} NOT IN (?)", ids)
+                             end
+                           }
   scope :without_node_ids, proc { |ids| where("node_id NOT IN (?)" ,ids) }
   scope :excellent, -> { where("excellent >= 1") }
 
-  scope :without_hide_nodes, -> { where("node_id NOT IN (?)", Topic.topic_index_hide_node_ids) }
-  scope :without_nodes, Proc.new { |node_ids|
-                        ids = node_ids + self.topic_index_hide_node_ids
+  scope :without_hide_nodes, -> { exclude_column_ids("node_id", Topic.topic_index_hide_node_ids) }
+  scope :without_nodes, proc { |node_ids|
+                        ids = node_ids + Topic.topic_index_hide_node_ids
                         ids.uniq!
-                        where("node_id NOT IN (?)", ids)
+                        exclude_column_ids("node_id", ids)
                       }
-  scope :without_users, proc { |user_ids| where("user_id NOT IN (?)", user_ids) }
+  scope :without_users, proc { |user_ids|
+    exclude_column_ids("user_id", user_ids)
+  }
+  scope :without_body, -> { select(column_names - ['body'])}
 
   def self.fields_for_list
     columns = %w(body body_html who_deleted follower_ids)
@@ -58,19 +68,6 @@ class Topic < ActiveRecord::Base
 
   def self.find_by_message_id(message_id)
     where(message_id: message_id).first
-  end
-
-  # 排除隐藏的节点
-  def self.without_hide_nodes
-    where(:node_id.nin => self.topic_index_hide_node_ids)
-  end
-
-  def self.without_nodes(node_ids)
-    where(:node_id.nin => node_ids)
-  end
-
-  def self.without_users(user_ids)
-    where(:user_id.nin => user_ids)
   end
 
   def self.topic_index_hide_node_ids
