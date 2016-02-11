@@ -1,20 +1,11 @@
 # coding: utf-8
-class Node
-  include Mongoid::Document
-  include Mongoid::Timestamps
-  include Mongoid::BaseModel
-
-  field :name
-  field :summary
-  field :sort, type: Integer, default: 0
-  field :topics_count, type: Integer, default: 0
+class Node < ActiveRecord::Base
 
   has_many :topics
   delegate :name, to: :section, prefix: true, allow_nil: true
 
   belongs_to :section
 
-  index section_id: 1
 
   validates_presence_of :name, :summary, :section
   validates_uniqueness_of :name
@@ -78,7 +69,7 @@ class Node
   def self.new_topic_dropdowns
     return [] if SiteConfig.new_topic_dropdown_node_ids.blank?
     node_ids = SiteConfig.new_topic_dropdown_node_ids.split(',').uniq.take(5)
-    where(:_id.in => node_ids)
+    where("id IN (?)", node_ids)
   end
 
 end

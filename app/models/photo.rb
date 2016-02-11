@@ -1,10 +1,5 @@
 # coding: utf-8
-class Photo
-  include Mongoid::Document
-  include Mongoid::Timestamps
-  include Mongoid::BaseModel
-
-  field :image
+class Photo < ActiveRecord::Base
 
   belongs_to :user
 

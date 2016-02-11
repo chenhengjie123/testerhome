@@ -1,20 +1,8 @@
 # coding: utf-8
-class Comment
-  include Mongoid::Document
-  include Mongoid::Timestamps
-  include Mongoid::BaseModel
-  include Mongoid::SoftDelete
-  include Mongoid::MarkdownBody
-
-  field :body
-  field :body_html
+class Comment < ActiveRecord::Base
 
   belongs_to :commentable, polymorphic: true
   belongs_to :user
-
-  index user_id: 1
-  index commentable_type: 1
-  index commentable_id: 1
 
   validates_presence_of :body
 

@@ -66,17 +66,13 @@ task :link_shared_files, roles: :web do
   run "ln -sf #{shared_path}/pids #{deploy_to}/current/tmp/"
 end
 
-task :mongoid_create_indexes, roles: :web do
-  run "cd #{deploy_to}/current/; RAILS_ENV=production bundle exec rake db:mongoid:create_indexes"
-end
-
 task :compile_assets, roles: :web do
   run "cd #{deploy_to}/current/; RAILS_ENV=production bundle exec rake assets:precompile"
   run "cd #{deploy_to}/current/; RAILS_ENV=production bundle exec rake assets:cdn"
 end
 
-task :mongoid_migrate_database, roles: :web do
-  run "cd #{deploy_to}/current/; RAILS_ENV=production bundle exec rake db:migrate"
+task :migrate_db, roles: :web do
+  run "cd #{current_path}; RAILS_ENV=production bundle exec rake db:migrate"
 end
 
 after "deploy:finalize_update","deploy:symlink", :init_shared_path, :link_shared_files , :mongoid_migrate_database , :compile_assets

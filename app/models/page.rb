@@ -2,27 +2,7 @@
 # 单页的文档页面
 # 采用 Markdown 编写
 require "redcarpet"
-class Page
-  include Mongoid::Document
-  include Mongoid::Timestamps
-  include Mongoid::BaseModel
-  include Mongoid::SoftDelete
-  include Mongoid::MarkdownBody
-
-  # 页面地址
-  field :slug
-  field :title
-  # 原始 Markdown 内容
-  field :body
-  # Markdown 格式化后的 html
-  field :body_html
-  field :editor_ids, type: Array, default: []
-  field :locked, type: Mongoid::Boolean, default: false
-  field :comments_count, type: Integer, default: 0
-  # 目前版本号
-  field :version, type: Integer, default: 0
-
-  index slug: 1
+class Page < ActiveRecord::Base
 
   has_many :versions, class_name: "PageVersion"
 
@@ -71,7 +51,7 @@ class Page
   end
 
   def editors
-    User.where(:_id.in => self.editor_ids)
+    User.where("id IN (?)", self.editor_ids)
   end
 
   def self.find_by_slug(slug)

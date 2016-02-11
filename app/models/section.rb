@@ -1,18 +1,13 @@
 # coding: utf-8
-class Section
-  include Mongoid::Document
-  include Mongoid::Timestamps
-  include Mongoid::BaseModel
+class Section < ActiveRecord::Base
 
-  field :name
-  field :sort, type: Integer, default: 0
   has_many :nodes, dependent: :destroy
 
   validates_presence_of :name
   validates_uniqueness_of :name
 
 
-  default_scope -> { desc(:sort) }
+  default_scope -> { order(sort: :desc) }
 
   after_save :update_cache_version
   after_destroy :update_cache_version
@@ -23,7 +18,7 @@ class Section
   end
 
   def sorted_nodes
-    self.nodes.where(:_id.nin => [Node.no_point_id]).sorted
+    nodes.where("id NOT IN (?)", [Node.no_point_id]).sorted
   end
 
   def all_sorted_nodes

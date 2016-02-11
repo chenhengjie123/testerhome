@@ -1,11 +1,4 @@
 GIT
-  remote: git://github.com/doorkeeper-gem/doorkeeper-mongodb.git
-  revision: 3bd96e589c6e144162a1869d265fe00b623939fc
-  specs:
-    doorkeeper-mongodb (3.0.0)
-      doorkeeper (>= 3.0.0.rc1)
-
-GIT
   remote: git://github.com/rails/turbolinks.git
   revision: 90d4132be6275edd997beeb66bf3876b0207291d
   specs:
@@ -87,7 +80,6 @@ GEM
     bootstrap-sass (2.3.2.2)
       sass (~> 3.2)
     bootstrap_tokenfield_rails (0.12.1)
-    bson (3.2.6)
     builder (3.2.2)
     cancancan (1.8.4)
     capistrano (2.9.0)
@@ -138,9 +130,11 @@ GEM
     devise-encryptable (0.1.2)
       devise (>= 2.1.0)
     diff-lcs (1.2.5)
-    doorkeeper (3.0.1)
+    doorkeeper (3.0.0)
       railties (>= 3.2)
     doorkeeper-i18n (2.0.0)
+    dropzonejs-rails (0.7.2)
+      rails (> 3.1)
     elasticsearch (1.0.14)
       elasticsearch-api (= 1.0.14)
       elasticsearch-transport (= 1.0.14)
@@ -187,6 +181,7 @@ GEM
     hashie (3.4.3)
     highline (1.7.8)
     hiredis (0.6.0)
+    http_accept_language (2.0.5)
     i18n (0.7.0)
     ice_nine (0.11.1)
     jasmine-core (2.3.4)
@@ -227,21 +222,6 @@ GEM
     mini_magick (4.3.6)
     mini_portile (0.6.2)
     minitest (5.8.2)
-    mongo (2.1.2)
-      bson (~> 3.0)
-    mongoid (5.0.0)
-      activemodel (~> 4.0)
-      mongo (~> 2.1)
-      origin (~> 2.1)
-      tzinfo (>= 0.3.37)
-    mongoid_auto_increment_id (0.8.1)
-      mongoid (>= 5.0.0, < 6.0.0)
-    mongoid_rails_migrations (1.1.0)
-      activesupport (>= 4.2.0)
-      bundler (>= 1.0.0)
-      mongoid (>= 4.0.0)
-      rails (>= 4.2.0)
-      railties (>= 4.2.0)
     multi_json (1.11.2)
     multi_xml (0.5.5)
     multipart-post (2.0.0)
@@ -269,8 +249,8 @@ GEM
     omniauth-oauth2 (1.4.0)
       oauth2 (~> 1.0)
       omniauth (~> 1.2)
-    origin (2.1.1)
     orm_adapter (0.5.0)
+    pg (0.18.4)
     phantomjs (1.9.8.0)
     posix-spawn (0.3.11)
     postmark (0.9.15)
@@ -427,9 +407,9 @@ DEPENDENCIES
   devise (~> 3.5.1)
   devise-async
   devise-encryptable (= 0.1.2)
-  doorkeeper
+  doorkeeper (= 3.0.0)
   doorkeeper-i18n
-  doorkeeper-mongodb!
+  dropzonejs-rails
   elasticsearch
   elasticsearch-model
   elasticsearch-rails
@@ -439,6 +419,7 @@ DEPENDENCIES
   grape (= 0.7.0)
   grape-active_model_serializers
   hiredis (~> 0.6.0)
+  http_accept_language
   jasmine-rails (~> 0.10.2)
   jbuilder
   jquery-rails
@@ -449,12 +430,10 @@ DEPENDENCIES
   md_emoji (= 1.0.2)
   message_bus
   mini_magick
-  mongoid (= 5.0.0)
-  mongoid_auto_increment_id (= 0.8.1)
-  mongoid_rails_migrations
   nokogiri (= 1.6.5)
   omniauth (~> 1.2.2)
   omniauth-github (~> 1.1.0)
+  pg
   postmark (= 0.9.15)
   postmark-rails (= 0.4.1)
   rack-cors
@@ -484,3 +463,6 @@ DEPENDENCIES
   turbolinks!
   uglifier
   will_paginate (= 3.0.7)
+
+BUNDLED WITH
+   1.11.2

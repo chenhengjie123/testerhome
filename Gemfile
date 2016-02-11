@@ -25,7 +25,6 @@ gem 'md_emoji', '1.0.2'
 gem 'exception_notification'
 
 gem 'doorkeeper', '= 3.0.0'
-gem "doorkeeper-mongodb", github: "doorkeeper-gem/doorkeeper-mongodb"
 gem 'doorkeeper-i18n'
 
 
@@ -38,10 +37,8 @@ gem 'mini_magick'
 gem 'rucaptcha'
 gem 'letter_avatar'
 
-# Mongoid 辅助插件
-gem 'mongoid', '5.0.0'
-gem 'mongoid_auto_increment_id', '0.8.1'
-gem 'mongoid_rails_migrations'
+# 数据库
+gem 'pg'
 
 # 用户系统
 gem 'devise', '~> 3.5.1'

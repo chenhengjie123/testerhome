@@ -1,5 +1,5 @@
 # coding: utf-8
-module Mongoid
+module Concerns
   module MarkdownBody
     extend ActiveSupport::Concern
     include ActionView::Helpers::SanitizeHelper

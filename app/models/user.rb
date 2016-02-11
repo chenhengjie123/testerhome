@@ -2,11 +2,9 @@
 require "securerandom"
 require "digest/md5"
 require "open-uri"
-class User
-  include Mongoid::Document
-  include Mongoid::Timestamps
-  include Mongoid::BaseModel
+class User < ActiveRecord::Base
   include Redis::Objects
+  include BaseModel
   extend OmniauthCallbacks
 
   ALLOW_LOGIN_CHARS_REGEXP = /\A\w+\z/
@@ -14,45 +12,8 @@ class User
   devise :database_authenticatable, :registerable, :recoverable,
          :rememberable, :trackable, :validatable, :omniauthable
 
-
-
-  field :email, type: String, default: ""
-  # Email 的 md5 值，用于 Gravatar 头像
-  field :email_md5
-  # Email 是否公开
-  field :email_public, type: Mongoid::Boolean
-  field :encrypted_password, type: String, default: ""
-
-  ## Recoverable
-  field :reset_password_token,   type: String
-  field :reset_password_sent_at, type: Time
-
-  ## Rememberable
-  field :remember_created_at, type: Time
-
-  ## Trackable
-  field :sign_in_count,      type: Integer, default: 0
-  field :current_sign_in_at, type: Time
-  field :last_sign_in_at,    type: Time
-  field :current_sign_in_ip, type: String
-  field :last_sign_in_ip,    type: String
-
-  field :login
-  field :name
-  field :location
-  field :location_id, type: Integer
-  field :bio
-  field :website
-  field :company
-  field :github
-  field :twitter
-
-  # 积分
-  field :score, type: Integer, default: 1000
-
   # skill
   attr_accessor :skill_list
-  field :skills, type: Array, default: []
 
   def skill_list=value
     self.skills = value.split(',').map{|s| s.to_s.strip}.uniq
@@ -62,47 +23,22 @@ class User
     self.skills.join(',')
   end
 
-  # 是否信任用户
-  field :verified, type: Mongoid::Boolean, default: false
-  # 是否是 HR
-  field :hr, type: Mongoid::Boolean, default: false
-  field :state, type: Integer, default: 1
-  field :tagline
-  field :topics_count, type: Integer, default: 0
-  field :replies_count, type: Integer, default: 0
-  # 用户密钥，用于客户端验证
-  field :private_token
-  field :favorite_topic_ids, type: Array, default: []
-  # 屏蔽的节点
-  field :blocked_node_ids, type: Array, default: []
-  # 屏蔽的用户
-  field :blocked_user_ids, type: Array, default: []
-
   mount_uploader :avatar, AvatarUploader
   mount_uploader :qrcode, QrcodeUploader
-
-  index login: 1
-  index email: 1
-  index location: 1
-  index replies_count: -1, topics_count: -1
-  index({private_token: 1},{ sparse: true })
 
   has_many :topics, dependent: :destroy
   has_many :notes
   has_many :replies, dependent: :destroy
-  embeds_many :authorizations
-  has_many :notifications, class_name: 'Notification::Base', dependent: :delete
+  has_many :authorizations
+  has_many :notifications, class_name: 'Notification::Base', dependent: :destroy
   has_many :photos
   has_many :oauth_applications, class_name: 'Doorkeeper::Application', as: :owner
 
   def read_notifications(notifications)
-    unread_ids = notifications.find_all{|notification| !notification.read?}.map(&:_id)
+    unread_ids = notifications.find_all{|notification| !notification.read?}.map(&:id)
     if unread_ids.any?
-      Notification::Base.where({
-        user_id: id,
-        :_id.in => unread_ids,
-        read: false
-      }).update_all(read: true, updated_at: Time.now)
+      Notification::Base.where(user_id: id,read: false)
+          .where("id IN (?)", unread_ids).update_all(read: true, updated_at: Time.now)
     end
   end
 
@@ -122,17 +58,25 @@ class User
                               length: {:in => 3..20}, presence: true,
                               uniqueness: {case_sensitive: false}
 
-  has_and_belongs_to_many :following, class_name: 'User', inverse_of: :followers
-  has_and_belongs_to_many :followers, class_name: 'User', inverse_of: :following
+  # has_and_belongs_to_many :following, class_name: 'User', inverse_of: :followers
+  # has_and_belongs_to_many :followers, class_name: 'User', inverse_of: :following
 
-  scope :hot, -> { desc(:replies_count, :topics_count) }
+  scope :hot, -> { order(replies_count: :desc).order(topics_count: :desc) }
   scope :fields_for_list, lambda {
-                          only(:_id, :name, :login, :email, :email_md5, :email_public, :avatar, :verified, :state,
+                          select(:id, :name, :login, :email, :email_md5, :email_public, :avatar, :verified, :state,
                                :tagline, :github, :website, :location, :location_id, :twitter, :co)
                         }
 
   scope :outstanding, -> {desc(:score)}
   scope :age, -> {asc(:_id)}
+
+  def following
+    User.where(id: self.following_ids)
+  end
+
+  def followers
+    User.where(id: self.follower_ids)
+  end
 
   def to_param
     login
@@ -268,9 +212,7 @@ class User
   end
 
   def self.find_login(slug)
-    # FIXME: Regexp search in MongoDB is slow!!!
-    raise Mongoid::Errors::DocumentNotFound.new(self, slug: slug) if not slug =~ ALLOW_LOGIN_CHARS_REGEXP
-    where(login: /^#{slug}$/i).first or raise Mongoid::Errors::DocumentNotFound.new(self, slug: slug)
+    where(login: slug).first
   end
 
   def bind?(provider)

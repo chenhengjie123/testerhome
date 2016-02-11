@@ -1,38 +1,20 @@
 # coding: utf-8
 require "digest/md5"
-class Reply
-  include Mongoid::Document
-  include Mongoid::Timestamps
-  include Mongoid::BaseModel
-  include Mongoid::CounterCache
-  include Mongoid::SoftDelete
-  include Mongoid::MarkdownBody
-  include Mongoid::Mentionable
-  include Mongoid::Likeable
+class Reply < ActiveRecord::Base
 
   UPVOTES = %w(+1 :+1: :thumbsup: :plus1: 👍 👍🏻 👍🏼 👍🏽 👍🏾 👍🏿)
 
-  field :body
-  field :body_html
-  field :source
-  field :message_id
-  # 匿名答复 0 否， 1 是
-  field :anonymous, type: Integer, default: 0
-
-  belongs_to :user, inverse_of: :replies
-  belongs_to :topic, inverse_of: :replies, touch: true
-  has_many :notifications, class_name: 'Notification::Base', dependent: :delete
+  belongs_to :user, inverse_of: :replies, counter_cache: true
+  belongs_to :topic, inverse_of: :replies, touch: true, counter_cache: true
+  has_many :notifications, class_name: 'Notification::Base', dependent: :destroy
 
   counter_cache name: :user, inverse_of: :replies
   counter_cache name: :topic, inverse_of: :replies
 
-  index user_id: 1
-  index topic_id: 1
-
   delegate :title, to: :topic, prefix: true, allow_nil: true
   delegate :login, to: :user, prefix: true, allow_nil: true
 
-  scope :fields_for_list, -> { only(:topic_id, :_id, :body_html, :updated_at, :created_at) }
+  scope :fields_for_list, -> { select(:topic_id, :id, :body_html, :updated_at, :created_at) }
 
   validates_presence_of :body
   validates_uniqueness_of :body, scope: [:topic_id, :user_id], message: "不能重复提交。"

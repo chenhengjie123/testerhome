@@ -91,7 +91,7 @@ class TopicsController < ApplicationController
     @page = params[:page].to_i > 0 ? params[:page].to_i : 1
 
     @threads << Thread.new do
-      @replies = @topic.replies.unscoped.without_body.asc(:_id)
+      @replies = @topic.replies.unscoped.without_body.order(:id).all
       @replies = @replies.paginate(page: @page, per_page: @per_page)
 
       check_current_user_liked_replies

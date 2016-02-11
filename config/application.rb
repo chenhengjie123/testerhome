@@ -1,8 +1,12 @@
 # coding: utf-8
 require File.expand_path('../boot', __FILE__)
 
+require "active_model/railtie"
+require "active_job/railtie"
+require "active_record/railtie"
 require "action_controller/railtie"
 require "action_mailer/railtie"
+require "action_view/railtie"
 require "rails/test_unit/railtie"
 require 'sprockets/railtie'
 
@@ -17,6 +21,15 @@ module TesterHome
     config.autoload_paths += %W(#{config.root}/lib)
     config.autoload_paths += %W(#{config.root}/app/grape)
 
+    # Ensure App config files exist.
+    if Rails.env.development?
+      %w(config redis secrets).each do |fname|
+        filename = "config/#{fname}.yml"
+        next if File.exist?(Rails.root.join(filename))
+        FileUtils.cp(Rails.root.join("#{filename}.default"), Rails.root.join(filename))
+      end
+    end
+
     config.time_zone = 'Beijing'
 
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
@@ -30,9 +43,6 @@ module TesterHome
 
     # Configure the default encoding used in templates for Ruby 1.9.
     config.encoding = "utf-8"
-
-    config.mongoid.include_root_in_json = false
-
 
 
     config.generators do |g|

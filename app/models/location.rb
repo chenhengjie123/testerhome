@@ -1,16 +1,12 @@
 # coding: utf-8
-class Location
-  include Mongoid::Document
+class Location < ActiveRecord::Base
 
-  field :name
-  field :users_count, type: Integer, default: 0
   has_many :users
 
-  scope :hot, -> { desc(:users_count) }
+  scope :hot, -> { order(users_count: :desc) }
 
   validates_uniqueness_of :name, case_sensitive: false
 
-  index name: 1
 
   def self.find_by_name(name)
     return nil if name.blank?

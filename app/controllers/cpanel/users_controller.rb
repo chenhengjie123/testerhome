@@ -6,7 +6,7 @@ class Cpanel::UsersController < Cpanel::ApplicationController
     if params[:q]
       @users = @users.where(login: /#{params[:q]}/)
     end
-    @users = @users.desc(:_id).paginate page: params[:page], per_page: 30
+    @users = @users.order(id: :desc).paginate page: params[:page], per_page: 30
   end
 
   def show

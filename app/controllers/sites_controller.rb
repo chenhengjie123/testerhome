@@ -3,7 +3,7 @@ class SitesController < ApplicationController
   load_and_authorize_resource
 
   def index
-    @site_nodes = SiteNode.all.desc('sort')
+    @site_nodes = SiteNode.all.order(sort: :desc)
     set_seo_meta("软件测试#{t("menu.sites")}")
   end
 
