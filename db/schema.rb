@@ -11,11 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-<<<<<<< HEAD
-ActiveRecord::Schema.define(version: 20160109040800) do
-=======
 ActiveRecord::Schema.define(version: 20160109171447) do
->>>>>>> df21a85... Add rails generate doorkeeper:application_owner
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
