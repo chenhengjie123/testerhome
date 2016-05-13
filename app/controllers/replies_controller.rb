@@ -15,6 +15,11 @@ class RepliesController < ApplicationController
       @reply.user_id = 12
     end
 
+    # 加入结贴
+    if @topic.reply_disabled?
+      @msg = t('topics.reply_disabled')
+    end
+
     if @reply.save
       current_user.read_topic(@topic)
       @msg = t('topics.reply_success')

@@ -16,6 +16,11 @@
     <% if @topic.node_id != Node.no_point_id %>
     <%= link_to raw("<i class='fa fa-ban'></i> 屏蔽"), ban_topic_path(@topic), method: 'post', title: "屏蔽此贴，移动到 NoPoint 节点" %>
     <% end %>
+    <% if !@topic.reply_disabled? %>
+      <%= link_to raw("<i class='fa fa-reply'></i> 结贴"), disable_reply_topic_path(@topic), 'data-confirm' => '确定要结贴么?', method: :post %>
+    <% else %>
+      <%= link_to raw("<i class='fa fa-reply'></i> 取消结贴"), enable_reply_topic_path(@topic), 'data-confirm' => '确定要取消结贴么?', method: :delete %>
+    <% end %>
   <% end %>
 
     <% if @topic.topic_pay_url %>

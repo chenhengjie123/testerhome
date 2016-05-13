@@ -281,6 +281,18 @@ class TopicsController < ApplicationController
     redirect_to @topic, success: '已转移到 NoPoint 节点。'
   end
 
+  def disable_reply
+    @topic = Topic.find(params[:id])
+    @topic.update_attribute(:reply_disabled, 1)
+    redirect_to @topic, success: '结帖成功'
+  end
+
+  def enable_reply
+    @topic = Topic.find(params[:id])
+    @topic.update_attribute(:reply_disabled, 0)
+    redirect_to @topic, success: '已经取消结贴'
+  end
+
   private
 
   def topic_params

@@ -25,6 +25,7 @@
     update_topic_success: "Topic modified successfully.."
     post_topic: "Post Topic"
     reply_success: "Replied Successfully"
+    reply_disabled: "Replied failed. Reply for this topic is disabled."
     reply_this_floor: "Reply to this floor"
     add_image: "Upload image"
     insert_codes: "Insert Codes"

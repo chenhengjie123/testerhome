@@ -25,6 +25,7 @@
     update_topic_success: "话题修改成功。"
     post_topic: "发帖"
     reply_success: "回复成功。"
+    reply_disabled: "回复失败。此帖子已结帖"
     reply_this_floor: "回复此楼"
     add_image: "上传图片"
     insert_codes: "插入代码"

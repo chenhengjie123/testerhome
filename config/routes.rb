@@ -63,6 +63,8 @@ Rails.application.routes.draw do
       patch :suggest
       delete :unsuggest
       post :ban
+      post :disable_reply
+      delete :enable_reply
     end
     collection do
       get :no_reply
